@@ -1,27 +1,166 @@
 <template>
-  <img alt="Vue logo" src="./assets/logo.png" />
-  <HelloWorld msg="Welcome to Your Vue.js + TypeScript App" />
+  <div class="min-h-screen bg-almond">
+    <div v-if="!started" class="absolute top-0 right-0 m-4">
+      <a
+        @click.prevent="clearApiKey"
+        href="#"
+        class="flex items-center text-yellow-600 hover:text-yellow-700"
+      >
+        <font-awesome-icon :icon="['far', 'circle-xmark']" class="mr-2" />
+        Clear API Key
+      </a>
+    </div>
+    <div class="container mx-auto p-4 h-screen flex flex-col">
+      <h1 class="text-3xl font-bold mb-4 text-center text-gunmetal">
+        Stochastic Socrates
+      </h1>
+      <div class="flex-grow">
+        <!-- API Key Modal -->
+        <ApiKeyModal v-if="showApiKeyModal" @save="saveApiKey" />
+
+        <!-- Topic Input -->
+        <div v-if="!started" class="mb-4">
+          <textarea
+            v-model="topic"
+            @keydown.enter.exact="startInterview"
+            @keydown.shift.enter.stop
+            placeholder="Topic you'd like to discuss..."
+            class="w-full p-4 border rounded-lg focus:outline-none focus:ring bg-white text-black"
+            rows="3"
+          ></textarea>
+          <button
+            @click="startInterview"
+            class="mt-2 px-4 py-2 bg-khaki text-black rounded hover:bg-walnutBrown hover:text-white"
+          >
+            Start Interview
+          </button>
+        </div>
+
+        <!-- Conversation -->
+        <ConversationHistory
+          ref="conversationHistory"
+          v-if="started && !finished"
+          :conversation="conversation"
+          :currentQuestion="currentQuestion"
+          @submitAnswer="submitAnswer"
+          @finishInterview="finishInterview"
+        />
+
+        <!-- Article Display -->
+        <ArticleDisplay
+          v-if="finished"
+          :articleMarkdown="articleMarkdown"
+          @startOver="startOver"
+        />
+      </div>
+    </div>
+  </div>
 </template>
 
-<script lang="ts">
-import { defineComponent } from "vue";
-import HelloWorld from "./components/HelloWorld.vue";
+<script>
+import ApiKeyModal from "./components/ApiKeyModal.vue";
+import ConversationHistory from "./components/ConversationHistory.vue";
+import ArticleDisplay from "./components/ArticleDisplay.vue";
+import { OpenAIService } from "./services/OpenAIService";
+import { library } from "@fortawesome/fontawesome-svg-core";
+import { faCircleXmark } from "@fortawesome/free-regular-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 
-export default defineComponent({
-  name: "App",
+library.add(faCircleXmark);
+
+export default {
   components: {
-    HelloWorld,
+    FontAwesomeIcon,
+    ApiKeyModal,
+    ConversationHistory,
+    ArticleDisplay,
   },
-});
+  data() {
+    return {
+      apiKey: "",
+      showApiKeyModal: false,
+      topic: "",
+      started: false,
+      finished: false,
+      conversation: [],
+      currentQuestion: "",
+      articleMarkdown: "",
+      openAIService: null,
+    };
+  },
+  created() {
+    this.apiKey = localStorage.getItem("apiKey") || "";
+    if (!this.apiKey) {
+      this.showApiKeyModal = true;
+    } else {
+      this.openAIService = new OpenAIService(this.apiKey);
+    }
+  },
+  methods: {
+    saveApiKey(key) {
+      this.apiKey = key;
+      localStorage.setItem("apiKey", key);
+      this.openAIService = new OpenAIService(this.apiKey);
+      this.showApiKeyModal = false;
+    },
+    async startInterview() {
+      if (!this.topic.trim()) return;
+      this.started = true;
+      await this.fetchNextQuestion();
+    },
+    async fetchNextQuestion() {
+      try {
+        this.currentQuestion = "Loading...";
+        const question = await this.openAIService.fetchNextQuestion(
+          this.topic,
+          this.conversation
+        );
+        this.currentQuestion = question;
+        this.$refs.conversationHistory.focus();
+      } catch (error) {
+        console.error(error);
+        alert("Error fetching the next question.");
+      }
+    },
+    async submitAnswer(answer) {
+      this.conversation.push({
+        question: this.currentQuestion,
+        answer: answer,
+      });
+      await this.fetchNextQuestion();
+    },
+    async finishInterview() {
+      this.finished = true;
+      try {
+        this.articleMarkdown = "Generating article...";
+        const article = await this.openAIService.generateDocument(
+          this.topic,
+          this.conversation
+        );
+        this.articleMarkdown = article;
+      } catch (error) {
+        console.error(error);
+        alert("Error generating the article.");
+      }
+    },
+    startOver() {
+      this.started = false;
+      this.finished = false;
+      this.topic = "";
+      this.conversation = [];
+      this.currentQuestion = "";
+      this.articleMarkdown = "";
+    },
+    clearApiKey() {
+      localStorage.removeItem("apiKey");
+      this.apiKey = "";
+      this.openAIService = null;
+      this.showApiKeyModal = true;
+    },
+  },
+};
 </script>
 
 <style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
-}
+/* Global styles can be added here if needed */
 </style>
