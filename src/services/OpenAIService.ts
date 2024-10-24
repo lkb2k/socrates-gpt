@@ -47,7 +47,7 @@ export class OpenAIService {
     const messages: ChatMessage[] = [
       {
         role: "system",
-        content: `You are an expert journalist interviewing the premiere mind on the topic of ${topic}. Ask probing questions to gain as much detail as possible for your article. Keep your questions short and focused.`,
+        content: `You are an expert journalist interviewing the premiere mind on the topic of ${topic}. Ask probing questions in the style of Nilay Patel to gain as much detail as possible for your article. Keep your questions short and focused and avoid getting rat-holed on a particular topic. Don't be afraid to be combative or jump to interesting tangents..`,
       },
       ...conversation.flatMap((qa) => [
         { role: "assistant" as const, content: qa.question },

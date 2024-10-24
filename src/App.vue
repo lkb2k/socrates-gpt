@@ -75,8 +75,8 @@ import ArticleDisplay from "./components/ArticleDisplay.vue";
 import { OpenAIService } from "./services/OpenAIService";
 import { library } from "@fortawesome/fontawesome-svg-core";
 import {
-  faCircleXmark,
   faCircleLeft,
+  faCircleXmark,
 } from "@fortawesome/free-regular-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 
@@ -124,12 +124,12 @@ export default {
     },
     async fetchNextQuestion() {
       this.isLoading = true;
+      this.currentQuestion = "Loading ...";
       try {
-        const question = await this.openAIService.fetchNextQuestion(
+        this.currentQuestion = await this.openAIService.fetchNextQuestion(
           this.topic,
           this.conversation
         );
-        this.currentQuestion = question;
         this.$refs.conversationHistory.focus();
       } catch (error) {
         console.error(error);
@@ -143,11 +143,10 @@ export default {
       try {
         const replacementPrompt = `The previous question was not liked. Please suggest an alternative to the following question: "${this.currentQuestion}"`;
         this.currentQuestion = "Loading new question...";
-        const newQuestion = await this.openAIService.fetchNextQuestion(
+        this.currentQuestion = await this.openAIService.fetchNextQuestion(
           replacementPrompt,
           []
         );
-        this.currentQuestion = newQuestion;
         this.$refs.conversationHistory.focus();
       } catch (error) {
         console.error(error);
@@ -167,11 +166,10 @@ export default {
       this.finished = true;
       try {
         this.articleMarkdown = "Generating article...";
-        const article = await this.openAIService.generateDocument(
+        this.articleMarkdown = await this.openAIService.generateDocument(
           this.topic,
           this.conversation
         );
-        this.articleMarkdown = article;
       } catch (error) {
         console.error(error);
         alert("Error generating the article.");
