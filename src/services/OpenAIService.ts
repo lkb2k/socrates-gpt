@@ -16,9 +16,9 @@ export class OpenAIService {
 
   static getArticleTypes(): { id: string; label: string }[] {
     return [
-      { id: "oralHistory", label: "Oral History" },
-      { id: "blogPost", label: "Blog Post" },
-      { id: "techSpec", label: "Technical Specification" },
+      { id: "techSpec", label: "A Tech Spec" },
+      { id: "oralHistory", label: "An Oral History" },
+      { id: "blogPost", label: "A Blog Post" },
     ];
   }
 
