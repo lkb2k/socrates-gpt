@@ -37,12 +37,30 @@
             class="w-full p-4 border rounded-lg focus:outline-none focus:ring bg-white text-black"
             rows="3"
           ></textarea>
-          <button
-            @click="startInterview"
-            class="mt-2 px-4 py-2 bg-khaki text-black rounded hover:bg-walnutBrown hover:text-white"
-          >
-            Start Interview
-          </button>
+          <div class="flex justify-between">
+            <button
+              @click="startInterview"
+              class="mt-2 px-4 py-2 bg-khaki text-black rounded hover:bg-walnutBrown hover:text-white"
+            >
+              Start Interview
+            </button>
+            <div>
+              <label for="interviewStyle">Interview Style </label>
+              <select
+                id="interview-style"
+                v-model="interviewStyle"
+                class="mt-2 p-2 border rounded"
+              >
+                <option
+                  v-for="style in interviewStyles"
+                  :key="style.id"
+                  :value="style.id"
+                >
+                  {{ style.label }}
+                </option>
+              </select>
+            </div>
+          </div>
         </div>
 
         <!-- Conversation -->
@@ -100,6 +118,8 @@ export default {
       currentQuestion: "",
       articleMarkdown: "",
       openAIService: null,
+      interviewStyle: "podcast",
+      interviewStyles: [],
     };
   },
   created() {
@@ -108,6 +128,7 @@ export default {
       this.showApiKeyModal = true;
     } else {
       this.openAIService = new OpenAIService(this.apiKey);
+      this.interviewStyles = this.openAIService.getInterviewStyles();
     }
   },
   methods: {
@@ -128,7 +149,8 @@ export default {
       try {
         this.currentQuestion = await this.openAIService.fetchNextQuestion(
           this.topic,
-          this.conversation
+          this.conversation,
+          this.interviewStyle
         );
         this.$refs.conversationHistory.focus();
       } catch (error) {
@@ -145,7 +167,8 @@ export default {
         this.currentQuestion = "Loading new question...";
         this.currentQuestion = await this.openAIService.fetchNextQuestion(
           replacementPrompt,
-          []
+          this.conversation,
+          this.interviewStyle
         );
         this.$refs.conversationHistory.focus();
       } catch (error) {
@@ -168,7 +191,8 @@ export default {
         this.articleMarkdown = "Generating article...";
         this.articleMarkdown = await this.openAIService.generateDocument(
           this.topic,
-          this.conversation
+          this.conversation,
+          this.interviewStyle
         );
       } catch (error) {
         console.error(error);
