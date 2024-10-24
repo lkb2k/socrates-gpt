@@ -1,4 +1,5 @@
 import axios from "axios";
+import Mustache from "mustache";
 
 export interface QuestionAnswer {
   question: string;
@@ -10,34 +11,29 @@ interface ChatMessage {
   content: string;
 }
 
-interface InterviewStyle {
-  id: string;
-  label: string;
-}
-
 export class OpenAIService {
   private apiKey: string;
 
-  static getInterviewStyles(): InterviewStyle[] {
+  static getArticleTypes(): { id: string; label: string }[] {
     return [
-      { id: "podcast", label: "Journalist" },
-      { id: "technical", label: "Technical Analyst" },
-      { id: "friend", label: "Nosy Friend" },
+      { id: "oralHistory", label: "Oral History" },
+      { id: "blogPost", label: "Blog Post" },
+      { id: "techSpec", label: "Technical Specification" },
     ];
   }
 
   private interviewPrompts: { [key: string]: string } = {
-    podcast: `You are an expert journalist interviewing the premiere mind on the topic of {{topic}}. Ask probing questions in the style of Nilay Patel to gain as much detail as possible for your article.  Don't be afraid to be combative or jump to interesting tangents.`,
-    technical: `You are a technical analyst gathering context to write about {{topic}}. Ask detailed and specific questions but keep them short and only one topic per question.`,
-    friend: `You are a friend having a casual conversation on the topic of {{topic}}.  You are very sympathetic and interested in the details.`,
+    blogPost: `You are an expert journalist in the style of Nilay Patel interviewing subject for an article about {{topic}}. The goal is to ask insightful, engaging, and provocative questions that reveal the subject’s personality, expertise, and unique perspective on technology, innovation, culture, or science. Focus on asking questions that will result in compelling quotes, deep insights, and fresh angles on topics relevant to The Verge’s audience`,
+    techSpec: `You are a technical analyst gathering context to write a technical document about {{topic}}. Ask detailed and specific questions but keep them short and only one topic per question.`,
+    oralHistory: `You are an expert interviewer in the style of Errol Moris interviewing subject for an article about {{topic}}. Start with simple questions and then move into questions that help the interviewee share meaningful and detailed stories about {{topic}}. Focus on asking open-ended questions that invite the interviewee to reflect on significant experiences, emotions, relationships, and changes they have witnessed `,
   };
 
   private documentPrompts: { [key: string]: string } = {
-    podcast:
-      "Create a document in the style of a substack article based on the conversation. Include your opinions of the topic and any relevant details from your own experience.",
-    technical:
+    oralHistory:
+      "Create an oral history in the style of a substack article based on the conversation. ",
+    techSpec:
       "Produce a technical document based on the conversation and including any relevant technical details from your own experience.",
-    friend: "Write a letter to your friend expressing your thoughts",
+    blogPost: "Write a blog post explaining the topic under discussion.",
   };
 
   constructor(apiKey: string) {
@@ -70,16 +66,18 @@ export class OpenAIService {
   async fetchNextQuestion(
     topic: string,
     conversation: QuestionAnswer[],
-    interviewStyle: string
+    document: string
   ): Promise<string> {
-    const promptTemplate =
-      this.interviewPrompts[interviewStyle] || this.interviewPrompts.journalist;
-    const prompt = promptTemplate.replace("{{topic}}", topic);
+    const questionTemplate = this.interviewPrompts[document];
+    const questionPrompt = Mustache.render(questionTemplate, {
+      topic,
+      document,
+    });
 
     const messages: ChatMessage[] = [
       {
         role: "system",
-        content: prompt,
+        content: questionPrompt,
       },
       {
         role: "system",
@@ -102,10 +100,13 @@ export class OpenAIService {
   async generateDocument(
     topic: string,
     conversation: QuestionAnswer[],
-    interviewStyle: string
+    document: string
   ): Promise<string> {
-    const documentInstruction =
-      this.documentPrompts[interviewStyle] || this.documentPrompts.journalist;
+    const documentTemplate = this.documentPrompts[document];
+    const documentPrompt = Mustache.render(documentTemplate, {
+      topic,
+      document,
+    });
 
     const conversationText = conversation
       .map((qa) => `Q: ${qa.question}\nA: ${qa.answer}`)
@@ -113,16 +114,13 @@ export class OpenAIService {
 
     const messages: ChatMessage[] = [
       {
-        role: "system",
-        content: `You are a helpful assistant that uses the style to ${documentInstruction}.`,
+        role: "user",
+        content: documentPrompt,
       },
       {
         role: "user",
         content: `
-        Please ${documentInstruction} explaining the topic in markdown format based on the following conversation:
-
-        Topic: ${topic}
-
+        Use the following conversation as a guide and return the document in markdown format
         ${conversationText}
       `,
       },

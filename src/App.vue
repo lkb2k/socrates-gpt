@@ -21,7 +21,7 @@
     </div>
     <div class="container mx-auto p-4 h-screen flex flex-col">
       <h1 class="text-3xl font-bold mb-4 text-center text-gunmetal">
-        Stochastic Socrates
+        The Socratic LLM
       </h1>
       <div class="flex-grow">
         <!-- API Key Modal -->
@@ -45,18 +45,18 @@
               Start Interview
             </button>
             <div>
-              <label for="interviewStyle">Interview Style </label>
+              <label for="articleType">What are you writing? </label>
               <select
-                id="interview-style"
-                v-model="interviewStyle"
+                id="article-type"
+                v-model="articleType"
                 class="mt-2 p-2 border rounded"
               >
                 <option
-                  v-for="style in interviewStyles"
-                  :key="style.id"
-                  :value="style.id"
+                  v-for="type in articleTypes"
+                  :key="type.id"
+                  :value="type.id"
                 >
-                  {{ style.label }}
+                  {{ type.label }}
                 </option>
               </select>
             </div>
@@ -118,13 +118,13 @@ export default {
       currentQuestion: "",
       articleMarkdown: "",
       openAIService: null,
-      interviewStyle: "podcast",
-      interviewStyles: [],
+      articleType: "techSpec",
+      articleTypes: [],
     };
   },
   created() {
     this.apiKey = localStorage.getItem("apiKey") || "";
-    this.interviewStyles = OpenAIService.getInterviewStyles();
+    this.articleTypes = OpenAIService.getArticleTypes();
 
     if (!this.apiKey) {
       this.showApiKeyModal = true;
@@ -151,7 +151,7 @@ export default {
         this.currentQuestion = await this.openAIService.fetchNextQuestion(
           this.topic,
           this.conversation,
-          this.interviewStyle
+          this.articleType
         );
         this.$refs.conversationHistory.focus();
       } catch (error) {
@@ -169,7 +169,7 @@ export default {
         this.currentQuestion = await this.openAIService.fetchNextQuestion(
           replacementPrompt,
           this.conversation,
-          this.interviewStyle
+          this.articleType
         );
         this.$refs.conversationHistory.focus();
       } catch (error) {
@@ -193,7 +193,7 @@ export default {
         this.articleMarkdown = await this.openAIService.generateDocument(
           this.topic,
           this.conversation,
-          this.interviewStyle
+          this.articleType
         );
       } catch (error) {
         console.error(error);
