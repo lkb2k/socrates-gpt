@@ -12,6 +12,11 @@
         placeholder="API Key"
         class="w-full p-3 border rounded-lg focus:outline-none focus:ring bg-white text-black"
       />
+      <div class="text-sm text-gray-500 mt-2">
+        The key is stored in your browser and never sent to our server. All
+        interactions with the OpenAI API are done directly between the browser
+        and OpenAI.
+      </div>
       <div class="flex justify-end mt-4">
         <button
           @click="$emit('save', apiKeyInput)"
