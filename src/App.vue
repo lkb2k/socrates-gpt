@@ -10,6 +10,15 @@
         Clear API Key
       </a>
     </div>
+    <div v-if="started" class="absolute top-0 right-0 m-4">
+      <a
+        @click.prevent="startOver"
+        href="#"
+        class="flex items-center text-yellow-600 hover:text-yellow-700"
+      >
+        Start Over
+      </a>
+    </div>
     <div class="container mx-auto p-4 h-screen flex flex-col">
       <h1 class="text-3xl font-bold mb-4 text-center text-gunmetal">
         Stochastic Socrates
@@ -42,15 +51,17 @@
           v-if="started && !finished"
           :conversation="conversation"
           :currentQuestion="currentQuestion"
+          :isLoading="isLoading"
           @submitAnswer="submitAnswer"
+          @getAlternativeQuestion="getAlternativeQuestion"
           @finishInterview="finishInterview"
         />
-
         <!-- Article Display -->
         <ArticleDisplay
           v-if="finished"
           :articleMarkdown="articleMarkdown"
           @startOver="startOver"
+          @returnToConversation="returnToConversation"
         />
       </div>
     </div>
@@ -63,10 +74,13 @@ import ConversationHistory from "./components/ConversationHistory.vue";
 import ArticleDisplay from "./components/ArticleDisplay.vue";
 import { OpenAIService } from "./services/OpenAIService";
 import { library } from "@fortawesome/fontawesome-svg-core";
-import { faCircleXmark } from "@fortawesome/free-regular-svg-icons";
+import {
+  faCircleXmark,
+  faCircleLeft,
+} from "@fortawesome/free-regular-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 
-library.add(faCircleXmark);
+library.add(faCircleXmark, faCircleLeft);
 
 export default {
   components: {
@@ -109,8 +123,8 @@ export default {
       await this.fetchNextQuestion();
     },
     async fetchNextQuestion() {
+      this.isLoading = true;
       try {
-        this.currentQuestion = "Loading...";
         const question = await this.openAIService.fetchNextQuestion(
           this.topic,
           this.conversation
@@ -120,6 +134,26 @@ export default {
       } catch (error) {
         console.error(error);
         alert("Error fetching the next question.");
+      } finally {
+        this.isLoading = false;
+      }
+    },
+    async getAlternativeQuestion() {
+      this.isLoading = true;
+      try {
+        const replacementPrompt = `The previous question was not liked. Please suggest an alternative to the following question: "${this.currentQuestion}"`;
+        this.currentQuestion = "Loading new question...";
+        const newQuestion = await this.openAIService.fetchNextQuestion(
+          replacementPrompt,
+          []
+        );
+        this.currentQuestion = newQuestion;
+        this.$refs.conversationHistory.focus();
+      } catch (error) {
+        console.error(error);
+        alert("Error fetching the alternative question.");
+      } finally {
+        this.isLoading = false;
       }
     },
     async submitAnswer(answer) {
@@ -156,6 +190,9 @@ export default {
       this.apiKey = "";
       this.openAIService = null;
       this.showApiKeyModal = true;
+    },
+    returnToConversation() {
+      this.finished = false;
     },
   },
 };

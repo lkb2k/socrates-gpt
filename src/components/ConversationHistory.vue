@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col h-full justify-between">
+  <div class="relative flex flex-col h-full justify-between">
     <!-- Display Conversation -->
     <div>
       <div v-for="(qa, index) in conversation" :key="index" class="mb-6">
@@ -24,9 +24,20 @@
       <!-- Current Question -->
       <div v-if="currentQuestion" class="flex items-start mb-2">
         <div
-          class="bg-gunmetal text-white p-4 rounded-tr-lg rounded-br-lg rounded-bl-lg max-w-xl"
+          class="relative bg-gunmetal text-white p-7 rounded-tr-lg rounded-br-lg rounded-bl-lg max-w-xl"
         >
           {{ currentQuestion }}
+          <button
+            v-if="!isLoading"
+            @click="$emit('getAlternativeQuestion')"
+            class="absolute bottom-0 -right-0 bg-almond p-1"
+            style="border-top-left-radius: 25%; border-bottom-right-radius: 25%"
+          >
+            <font-awesome-icon
+              :icon="['far', 'circle-xmark']"
+              class="text-gray-800"
+            />
+          </button>
         </div>
       </div>
     </div>
@@ -53,7 +64,7 @@
           @click="$emit('finishInterview')"
           class="px-4 py-2 bg-gunmetal text-white rounded hover:bg-black"
         >
-          I'm Done
+          I'm done. Write it Up!
         </button>
       </div>
     </div>
@@ -61,8 +72,17 @@
 </template>
 
 <script>
+import { library } from "@fortawesome/fontawesome-svg-core";
+import { faCircleXmark } from "@fortawesome/free-regular-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
+
+library.add(faCircleXmark);
+
 export default {
-  props: ["conversation", "currentQuestion"],
+  props: ["conversation", "currentQuestion", "isLoading"],
+  components: {
+    FontAwesomeIcon,
+  },
   data() {
     return {
       answerInput: "",
