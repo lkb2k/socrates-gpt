@@ -79,19 +79,6 @@ export default {
 </script>
 
 <style>
-// Add tooltip style if not already present
-[v-tooltip]:hover::after {
-  content: attr(v-tooltip);
-  position: absolute;
-  background-color: #333;
-  color: #fff;
-  padding: 4px 8px;
-  border-radius: 4px;
-  top: -30px;
-  font-size: 0.75rem;
-  white-space: nowrap;
-  pointer-events: none;
-}
 .prose img {
   max-width: 100%;
 }
