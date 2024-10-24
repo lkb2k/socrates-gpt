@@ -124,11 +124,12 @@ export default {
   },
   created() {
     this.apiKey = localStorage.getItem("apiKey") || "";
+    this.interviewStyles = OpenAIService.getInterviewStyles();
+
     if (!this.apiKey) {
       this.showApiKeyModal = true;
     } else {
       this.openAIService = new OpenAIService(this.apiKey);
-      this.interviewStyles = this.openAIService.getInterviewStyles();
     }
   },
   methods: {

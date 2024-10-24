@@ -18,6 +18,14 @@ interface InterviewStyle {
 export class OpenAIService {
   private apiKey: string;
 
+  static getInterviewStyles(): InterviewStyle[] {
+    return [
+      { id: "podcast", label: "Journalist" },
+      { id: "technical", label: "Technical Analyst" },
+      { id: "friend", label: "Nosy Friend" },
+    ];
+  }
+
   private interviewPrompts: { [key: string]: string } = {
     podcast: `You are an expert journalist interviewing the premiere mind on the topic of {{topic}}. Ask probing questions in the style of Nilay Patel to gain as much detail as possible for your article.  Don't be afraid to be combative or jump to interesting tangents.`,
     technical: `You are a technical analyst gathering context to write about {{topic}}. Ask detailed and specific questions but keep them short and only one topic per question.`,
@@ -36,13 +44,6 @@ export class OpenAIService {
     this.apiKey = apiKey;
   }
 
-  getInterviewStyles(): InterviewStyle[] {
-    return [
-      { id: "podcast", label: "Journalist" },
-      { id: "technical", label: "Technical Analyst" },
-      { id: "friend", label: "Nosy Friend" },
-    ];
-  }
   async callOpenAI(
     messages: ChatMessage[],
     maxTokens: number
