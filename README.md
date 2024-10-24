@@ -11,3 +11,4 @@ The application itself was mostly written by ChatGPT, the prompt is in the docs 
     npm install
     npm run serve
 ```
+
