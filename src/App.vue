@@ -54,13 +54,18 @@
           <div class="flex justify-between">
             <!-- Voice Mode Toggle -->
             <div class="flex items-center ml-2">
-              <label class="relative inline-flex items-center cursor-pointer">
+              <label
+                for="voice-mode-toggle"
+                class="relative inline-flex items-center cursor-pointer"
+              >
                 <input
+                  id="voice-mode-toggle"
                   type="checkbox"
                   v-model="voiceMode"
                   class="sr-only peer"
                   @change="handleVoiceModeToggle"
                 />
+                <!--suppress HtmlUnknownTag -->
                 <div
                   class="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-yellow-300 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-600"
                 ></div>
@@ -121,13 +126,16 @@
   </div>
 </template>
 
-<script>
-/* global webkitSpeechRecognition */
+<script lang="ts">
+import { defineComponent } from "vue";
 import ApiKeyModal from "./components/ApiKeyModal.vue";
 import ConversationHistory from "./components/ConversationHistory.vue";
 import ArticleDisplay from "./components/ArticleDisplay.vue";
 import { OpenAIService } from "./services/OpenAIService";
 import { PromptService } from "./services/PromptService";
+import { LocalStorageService } from "./services/LocalStorageService";
+import { VoiceService } from "./services/VoiceService";
+
 import { library } from "@fortawesome/fontawesome-svg-core";
 import {
   faCircleLeft,
@@ -138,7 +146,7 @@ import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 
 library.add(faCircleXmark, faCircleLeft, faMicrophone);
 
-export default {
+export default defineComponent({
   components: {
     FontAwesomeIcon,
     ApiKeyModal,
@@ -152,19 +160,21 @@ export default {
       topic: "",
       started: false,
       finished: false,
-      conversation: [],
+      conversation: [] as Array<{ question: string; answer: string }>,
       currentQuestion: "",
       articleMarkdown: "",
-      llmService: null,
+      llmService: null as OpenAIService | null,
       articleType: "techSpec",
-      articleTypes: [],
+      articleTypes: PromptService.getArticleTypes(),
       voiceMode: false,
-      recognition: null,
       isRecordingTopic: false,
+      localStorage: new LocalStorageService(),
+      voiceService: new VoiceService(),
+      isLoading: false,
     };
   },
   watch: {
-    voiceMode(newVal) {
+    voiceMode(newVal: boolean) {
       if (newVal && !this.started) {
         this.$nextTick(() => {
           this.toggleTopicVoiceInput();
@@ -173,8 +183,7 @@ export default {
     },
   },
   created() {
-    this.apiKey = localStorage.getItem("apiKey") || "";
-    this.articleTypes = PromptService.getArticleTypes();
+    this.apiKey = this.localStorage.getItem("apiKey") || "";
 
     if (!this.apiKey) {
       this.showApiKeyModal = true;
@@ -182,45 +191,36 @@ export default {
       this.llmService = new OpenAIService(this.apiKey);
     }
 
-    // Initialize speech recognition
-    if ("webkitSpeechRecognition" in window) {
-      this.recognition = new webkitSpeechRecognition();
-      this.recognition.continuous = false;
-      this.recognition.interimResults = true;
+    // Set up voice service
+    this.voiceService.setOnResult((transcript: string) => {
+      if (this.isRecordingTopic) {
+        this.topic = transcript;
+      }
+    });
 
-      this.recognition.onresult = (event) => {
-        const transcript = Array.from(event.results)
-          .map((result) => result[0].transcript)
-          .join("");
-
-        if (this.isRecordingTopic) {
-          this.topic = transcript;
-        }
-      };
-
-      this.recognition.onend = () => {
-        this.isRecordingTopic = false;
-      };
-    }
+    this.voiceService.setOnEnd(() => {
+      this.isRecordingTopic = false;
+    });
   },
   methods: {
     handleVoiceModeToggle() {
-      if (this.voiceMode && !this.recognition) {
+      if (this.voiceMode && !this.voiceService.isSupported()) {
         alert("Speech recognition is not supported in your browser.");
         this.voiceMode = false;
       }
     },
     toggleTopicVoiceInput() {
       if (this.isRecordingTopic) {
-        this.recognition.stop();
+        this.voiceService.stop();
+        this.isRecordingTopic = false;
       } else {
-        this.recognition.start();
+        this.voiceService.start();
         this.isRecordingTopic = true;
       }
     },
-    saveApiKey(key) {
+    saveApiKey(key: string) {
       this.apiKey = key;
-      localStorage.setItem("apiKey", key);
+      this.localStorage.setItem("apiKey", key);
       this.llmService = new OpenAIService(this.apiKey);
       this.showApiKeyModal = false;
     },
@@ -230,6 +230,7 @@ export default {
       await this.fetchNextQuestion();
     },
     async fetchNextQuestion() {
+      if (!this.llmService) return;
       this.isLoading = true;
       this.currentQuestion = "Loading ...";
       try {
@@ -238,7 +239,11 @@ export default {
           this.conversation,
           this.articleType
         );
-        this.$refs.conversationHistory.focus();
+        (
+          this.$refs.conversationHistory as InstanceType<
+            typeof ConversationHistory
+          >
+        )?.focus();
       } catch (error) {
         console.error(error);
         alert("Error fetching the next question.");
@@ -247,6 +252,7 @@ export default {
       }
     },
     async getAlternativeQuestion() {
+      if (!this.llmService) return;
       this.isLoading = true;
       try {
         const replacementPrompt = [
@@ -264,7 +270,11 @@ export default {
           replacementPrompt,
           this.articleType
         );
-        this.$refs.conversationHistory.focus();
+        (
+          this.$refs.conversationHistory as InstanceType<
+            typeof ConversationHistory
+          >
+        )?.focus();
       } catch (error) {
         console.error(error);
         alert("Error fetching the alternative question.");
@@ -272,7 +282,7 @@ export default {
         this.isLoading = false;
       }
     },
-    async submitAnswer(answer) {
+    async submitAnswer(answer: string) {
       this.conversation.push({
         question: this.currentQuestion,
         answer: answer,
@@ -280,6 +290,7 @@ export default {
       await this.fetchNextQuestion();
     },
     async finishInterview() {
+      if (!this.llmService) return;
       this.finished = true;
       try {
         this.articleMarkdown = "Generating article...";
@@ -302,7 +313,7 @@ export default {
       this.articleMarkdown = "";
     },
     clearApiKey() {
-      localStorage.removeItem("apiKey");
+      this.localStorage.removeItem("apiKey");
       this.apiKey = "";
       this.llmService = null;
       this.showApiKeyModal = true;
@@ -311,5 +322,5 @@ export default {
       this.finished = false;
     },
   },
-};
+});
 </script>

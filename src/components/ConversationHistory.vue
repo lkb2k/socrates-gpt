@@ -81,16 +81,17 @@
   </div>
 </template>
 
-<script>
-/* global webkitSpeechRecognition */
+<script lang="ts">
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { faCircleXmark } from "@fortawesome/free-regular-svg-icons";
 import { faMicrophone } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
+import { VoiceService, SpeechRecognitionError } from "@/services/VoiceService";
+import { defineComponent, ref } from "vue";
 
 library.add(faCircleXmark, faMicrophone);
 
-export default {
+export default defineComponent({
   props: {
     conversation: {
       type: Array,
@@ -115,14 +116,18 @@ export default {
   data() {
     return {
       answerInput: "",
-      recognition: null,
+      voiceService: new VoiceService(),
       isRecording: false,
-      speechTimeout: null,
-      lastResponseTime: null,
+    };
+  },
+  setup() {
+    const answerInputRef = ref<HTMLTextAreaElement>();
+    return {
+      answerInputRef,
     };
   },
   computed: {
-    getPlaceholder() {
+    getPlaceholder(): string {
       if (this.voiceMode && !this.isLoading) {
         return this.isRecording
           ? "Listening... (will auto-submit after 2.5s pause)"
@@ -132,115 +137,56 @@ export default {
     },
   },
   watch: {
-    conversation: {
-      deep: true,
-      handler() {
-        this.$nextTick(() => {
-          this.scrollToBottom();
-        });
-      },
-    },
-    currentQuestion() {
-      this.$nextTick(() => {
-        this.scrollToBottom();
-      });
-    },
     isLoading(newVal, oldVal) {
       // When loading finishes (transitions from true to false)
       if (oldVal && !newVal && this.voiceMode) {
-        this.lastResponseTime = Date.now();
-        // Small delay to allow for the UI to update and sound to play if implemented
         setTimeout(() => this.startRecording(), 500);
       }
     },
   },
   created() {
-    // Initialize speech recognition
-    if ("webkitSpeechRecognition" in window) {
-      this.recognition = new webkitSpeechRecognition();
-      this.recognition.continuous = true;
-      this.recognition.interimResults = true;
+    this.voiceService.setOnResult((transcript: string) => {
+      this.answerInput = transcript;
+    });
 
-      this.recognition.onresult = (event) => {
-        this.answerInput = Array.from(event.results)
-          .map((result) => result[0].transcript)
-          .join("");
+    this.voiceService.setOnEnd(() => {
+      if (this.isRecording && this.voiceMode && !this.isLoading) {
+        this.voiceService.start();
+      } else {
+        this.isRecording = false;
+      }
+    });
 
-        // Reset the timeout on new speech
-        if (this.speechTimeout) {
-          clearTimeout(this.speechTimeout);
-        }
+    this.voiceService.setOnError((event: SpeechRecognitionError) => {
+      if (event.error === "no-speech" && this.answerInput.trim()) {
+        this.submit();
+      }
+    });
 
-        // Set new timeout for 2.5 seconds of silence
-        this.speechTimeout = setTimeout(() => {
-          if (this.isRecording && this.answerInput.trim()) {
-            this.submit();
-          }
-        }, 2500);
-      };
-
-      this.recognition.onend = () => {
-        // Only restart if we're still supposed to be recording
-        if (this.isRecording && this.voiceMode && !this.isLoading) {
-          this.recognition.start();
-        } else {
-          this.isRecording = false;
-        }
-      };
-
-      this.recognition.onerror = (event) => {
-        if (event.error === "no-speech") {
-          // If no speech detected for a while, check if we should submit
-          if (this.answerInput.trim()) {
-            this.submit();
-          }
-        }
-      };
-    }
+    this.voiceService.setOnInactivity(() => {
+      if (this.answerInput.trim()) {
+        this.submit();
+      }
+    });
   },
   beforeUnmount() {
     this.cleanupVoiceRecording();
   },
   methods: {
-    scrollToBottom() {
-      const container = this.$refs.conversationContainer;
-      if (container) {
-        container.scrollTop = container.scrollHeight;
-      }
-    },
     startRecording() {
-      if (!this.recognition || this.isRecording) return;
-
+      if (!this.voiceService.isSupported() || this.isRecording) return;
       this.answerInput = "";
       this.isRecording = true;
-      this.recognition.start();
+      this.voiceService.start();
     },
+
     cleanupVoiceRecording() {
-      if (this.speechTimeout) {
-        clearTimeout(this.speechTimeout);
-      }
-      if (this.isRecording) {
-        this.recognition.stop();
-      }
+      this.voiceService.stop();
       this.isRecording = false;
     },
-    submit() {
-      if (!this.answerInput.trim()) return;
-      this.cleanupVoiceRecording();
-      this.$emit("submitAnswer", this.answerInput);
-      this.answerInput = "";
-    },
-    handleKeyDown(event) {
-      if (event.key === "Enter" && !event.shiftKey) {
-        event.preventDefault();
-        this.submit();
-      }
-    },
-    focus() {
-      this.$refs.answerInput.focus();
-    },
+
     toggleVoiceInput() {
-      if (!this.recognition) {
+      if (!this.voiceService.isSupported()) {
         alert("Speech recognition is not supported in your browser.");
         return;
       }
@@ -251,6 +197,21 @@ export default {
         this.startRecording();
       }
     },
+    submit() {
+      if (!this.answerInput.trim()) return;
+      this.cleanupVoiceRecording();
+      this.$emit("submitAnswer", this.answerInput);
+      this.answerInput = "";
+    },
+    handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        this.submit();
+      }
+    },
+    focus() {
+      this.answerInputRef?.focus();
+    },
   },
-};
+});
 </script>
