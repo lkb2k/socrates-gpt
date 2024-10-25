@@ -127,6 +127,7 @@ import ApiKeyModal from "./components/ApiKeyModal.vue";
 import ConversationHistory from "./components/ConversationHistory.vue";
 import ArticleDisplay from "./components/ArticleDisplay.vue";
 import { OpenAIService } from "./services/OpenAIService";
+import { PromptService } from "./services/PromptService";
 import { library } from "@fortawesome/fontawesome-svg-core";
 import {
   faCircleLeft,
@@ -154,7 +155,7 @@ export default {
       conversation: [],
       currentQuestion: "",
       articleMarkdown: "",
-      openAIService: null,
+      llmService: null,
       articleType: "techSpec",
       articleTypes: [],
       voiceMode: false,
@@ -173,12 +174,12 @@ export default {
   },
   created() {
     this.apiKey = localStorage.getItem("apiKey") || "";
-    this.articleTypes = OpenAIService.getArticleTypes();
+    this.articleTypes = PromptService.getArticleTypes();
 
     if (!this.apiKey) {
       this.showApiKeyModal = true;
     } else {
-      this.openAIService = new OpenAIService(this.apiKey);
+      this.llmService = new OpenAIService(this.apiKey);
     }
 
     // Initialize speech recognition
@@ -220,7 +221,7 @@ export default {
     saveApiKey(key) {
       this.apiKey = key;
       localStorage.setItem("apiKey", key);
-      this.openAIService = new OpenAIService(this.apiKey);
+      this.llmService = new OpenAIService(this.apiKey);
       this.showApiKeyModal = false;
     },
     async startInterview() {
@@ -232,7 +233,7 @@ export default {
       this.isLoading = true;
       this.currentQuestion = "Loading ...";
       try {
-        this.currentQuestion = await this.openAIService.fetchNextQuestion(
+        this.currentQuestion = await this.llmService.fetchNextQuestion(
           this.topic,
           this.conversation,
           this.articleType
@@ -258,7 +259,7 @@ export default {
         ];
 
         this.currentQuestion = "Loading new question...";
-        this.currentQuestion = await this.openAIService.fetchNextQuestion(
+        this.currentQuestion = await this.llmService.fetchNextQuestion(
           this.topic,
           replacementPrompt,
           this.articleType
@@ -282,7 +283,7 @@ export default {
       this.finished = true;
       try {
         this.articleMarkdown = "Generating article...";
-        this.articleMarkdown = await this.openAIService.generateDocument(
+        this.articleMarkdown = await this.llmService.generateDocument(
           this.topic,
           this.conversation,
           this.articleType
@@ -303,7 +304,7 @@ export default {
     clearApiKey() {
       localStorage.removeItem("apiKey");
       this.apiKey = "";
-      this.openAIService = null;
+      this.llmService = null;
       this.showApiKeyModal = true;
     },
     returnToConversation() {
