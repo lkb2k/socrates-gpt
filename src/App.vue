@@ -1,46 +1,55 @@
 <template>
   <div class="min-h-screen bg-almond">
-    <div class="absolute top-0 right-0 flex items-center gap-4 m-4">
-      <!-- Existing buttons -->
+    <!-- Top buttons container with improved mobile layout -->
+    <div
+      class="absolute top-0 right-0 flex items-center gap-2 m-2 sm:gap-4 sm:m-4"
+    >
       <div v-if="!started">
         <a
           @click.prevent="clearApiKey"
           href="#"
-          class="flex items-center text-yellow-600 hover:text-yellow-700"
+          class="flex items-center text-sm sm:text-base text-yellow-600 hover:text-yellow-700"
         >
-          <font-awesome-icon :icon="['far', 'circle-xmark']" class="mr-2" />
-          Clear API Key
+          <font-awesome-icon
+            :icon="['far', 'trash-alt']"
+            class="mr-1 sm:mr-2"
+          />
+          API Key
         </a>
       </div>
       <div v-if="started">
         <a
           @click.prevent="startOver"
           href="#"
-          class="flex items-center text-yellow-600 hover:text-yellow-700"
+          class="flex items-center text-sm sm:text-base text-yellow-600 hover:text-yellow-700"
         >
           Start Over
         </a>
       </div>
     </div>
 
-    <div class="container mx-auto p-4 h-screen flex flex-col">
-      <h1 class="text-3xl font-bold mb-4 text-center text-gunmetal">
+    <div class="container mx-auto p-2 sm:p-4 h-screen flex flex-col">
+      <h1
+        class="text-2xl sm:text-3xl font-bold mb-2 sm:mb-4 text-center text-gunmetal"
+      >
         The Socratic LLM
       </h1>
+
       <div class="flex-grow">
         <!-- API Key Modal -->
         <ApiKeyModal v-if="showApiKeyModal" @save="saveApiKey" />
 
-        <!-- Topic Input -->
-        <div v-if="!started" class="mb-4">
+        <!-- Topic Input Section -->
+        <div v-if="!started" class="mb-4 space-y-4">
+          <!-- Textarea Container -->
           <div class="relative">
             <textarea
               v-model="topic"
               @keydown.enter.exact="startInterview"
               @keydown.shift.enter.stop
               placeholder="Topic you'd like to discuss..."
-              class="w-full p-4 border rounded-lg focus:outline-none focus:ring bg-white text-black"
-              rows="3"
+              class="w-full p-3 sm:p-4 border rounded-lg focus:outline-none focus:ring bg-white text-black text-sm"
+              rows="4"
             ></textarea>
             <button
               v-if="voiceMode"
@@ -51,36 +60,49 @@
               <font-awesome-icon :icon="['fas', 'microphone']" />
             </button>
           </div>
-          <div class="flex justify-between">
-            <!-- Voice Mode Toggle -->
-            <div class="flex items-center ml-2">
-              <label
-                for="voice-mode-toggle"
-                class="relative inline-flex items-center cursor-pointer"
-              >
-                <input
-                  id="voice-mode-toggle"
-                  type="checkbox"
-                  v-model="voiceMode"
-                  class="sr-only peer"
-                  @change="handleVoiceModeToggle"
-                />
-                <!--suppress HtmlUnknownTag -->
-                <div
-                  class="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-yellow-300 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-600"
-                ></div>
-                <span class="ml-3 text-sm font-medium text-gunmetal"
-                  >Voice Mode</span
+
+          <!-- Controls Section -->
+          <div class="flex flex-col sm:flex-row sm:items-center gap-4">
+            <!-- Voice Mode and Article Type Group -->
+            <!-- Voice Mode and Article Type Group -->
+            <div
+              class="flex justify-between sm:justify-start items-center flex-grow gap-4"
+            >
+              <!-- Voice Mode Toggle -->
+              <div class="flex items-center">
+                <label
+                  for="voice-mode-toggle"
+                  class="inline-flex items-center cursor-pointer"
                 >
-              </label>
-            </div>
-            <div class="flex items-center">
-              <div>
-                <label for="articleType">What are you writing? </label>
+                  <input
+                    id="voice-mode-toggle"
+                    type="checkbox"
+                    v-model="voiceMode"
+                    class="sr-only peer"
+                    @change="handleVoiceModeToggle"
+                  />
+                  <!--suppress HtmlUnknownTag -->
+                  <div
+                    class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"
+                  ></div>
+                  <span class="ml-3 text-sm font-medium text-gunmetal"
+                    >Voice Mode</span
+                  >
+                </label>
+              </div>
+
+              <!-- Article Type Selector -->
+              <div class="flex items-center gap-2">
+                <label
+                  for="articleType"
+                  class="text-sm font-medium text-gunmetal"
+                >
+                  What are you writing?
+                </label>
                 <select
                   id="article-type"
                   v-model="articleType"
-                  class="mt-2 p-2 border rounded"
+                  class="h-9 border rounded text-sm px-2 py-1"
                 >
                   <option
                     v-for="type in articleTypes"
@@ -92,9 +114,11 @@
                 </select>
               </div>
             </div>
+
+            <!-- Start Interview Button -->
             <button
               @click="startInterview"
-              class="mt-2 px-4 py-2 bg-khaki text-black rounded hover:bg-walnutBrown hover:text-white"
+              class="w-full sm:w-auto h-14 px-8 bg-khaki text-black rounded hover:bg-walnutBrown hover:text-white text-sm font-medium transition-colors duration-200 whitespace-nowrap"
             >
               Start Interview
             </button>
@@ -137,14 +161,11 @@ import { LocalStorageService } from "./services/LocalStorageService";
 import { VoiceService } from "./services/VoiceService";
 
 import { library } from "@fortawesome/fontawesome-svg-core";
-import {
-  faCircleLeft,
-  faCircleXmark,
-} from "@fortawesome/free-regular-svg-icons";
+import { faCircleLeft, faTrashAlt } from "@fortawesome/free-regular-svg-icons";
 import { faMicrophone } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 
-library.add(faCircleXmark, faCircleLeft, faMicrophone);
+library.add(faTrashAlt, faCircleLeft, faMicrophone);
 
 export default defineComponent({
   components: {
@@ -183,7 +204,8 @@ export default defineComponent({
     },
   },
   created() {
-    this.apiKey = this.localStorage.getItem("apiKey") || "";
+    this.checkUrlForApiKey();
+    this.apiKey = this.localStorage.getApiKey();
 
     if (!this.apiKey) {
       this.showApiKeyModal = true;
@@ -203,6 +225,15 @@ export default defineComponent({
     });
   },
   methods: {
+    checkUrlForApiKey() {
+      const hash = window.location.hash.substring(1);
+      if (hash.startsWith("sk-")) {
+        this.localStorage.setApiKey(hash);
+        // Remove the API key from the URL
+        history.replaceState(null, "", window.location.pathname);
+      }
+    },
+
     handleVoiceModeToggle() {
       if (this.voiceMode && !this.voiceService.isSupported()) {
         alert("Speech recognition is not supported in your browser.");
