@@ -203,7 +203,7 @@ export default defineComponent({
       }
     },
   },
-  created() {
+  mounted() {
     this.checkUrlForApiKey();
     this.apiKey = this.localStorage.getApiKey();
 
@@ -229,9 +229,9 @@ export default defineComponent({
       const hash = window.location.hash.substring(1);
       if (hash.startsWith("sk-")) {
         this.localStorage.setApiKey(hash);
-        // Remove the API key from the URL
-        history.replaceState(null, "", window.location.pathname);
       }
+      // Remove the API key from the URL
+      history.replaceState(null, "", window.location.pathname);
     },
 
     handleVoiceModeToggle() {
